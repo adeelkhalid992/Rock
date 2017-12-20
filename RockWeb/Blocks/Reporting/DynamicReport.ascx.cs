@@ -427,14 +427,22 @@ namespace RockWeb.Blocks.Reporting
 
                         if ( component is Rock.Reporting.DataFilter.OtherDataViewFilter )
                         {
-                            // don't include the actual DataView Picker filter, just the child filters
-                            parentControl.Controls.Remove( filterControl );
-
                             Rock.Reporting.DataFilter.OtherDataViewFilter otherDataViewFilter = component as Rock.Reporting.DataFilter.OtherDataViewFilter;
                             var otherDataView = otherDataViewFilter.GetSelectedDataView( filter.Selection );
                             if ( otherDataView != null )
                             {
-                                CreateFilterControl( parentControl, otherDataView.DataViewFilter, reportEntityType, setSelection, selectedDataFieldGuids, configurableDataFieldGuids, togglableDataFieldGuids, rockContext );
+                                // if this is an 'OtherDataViewFilder', and it doesn't have a Transform, don't include the actual DataView Picker filter, just the child filters
+                                if ( !otherDataView.TransformEntityTypeId.HasValue )
+                                {
+                                    parentControl.Controls.Remove( filterControl );
+
+                                    CreateFilterControl( parentControl, otherDataView.DataViewFilter, reportEntityType, setSelection, selectedDataFieldGuids, configurableDataFieldGuids, togglableDataFieldGuids, rockContext );
+                                }
+                                else
+                                {
+                                    // if it has a tranform, list the whole dataview without breaking out the individual filters
+                                    filterControl.Label = component.GetTitle( reportEntityTypeModel ) + " ( Transform )";
+                                }
                             }
                         }
                     }
@@ -645,6 +653,13 @@ namespace RockWeb.Blocks.Reporting
                 mdConfigure.ServerSaveLink.Disabled = false;
                 grdDataFilters.DataSource = filters.Select( a =>
                 {
+                    var visibleDefault = selectDefault;
+                    if ( selectDefault && a.FromOtherDataView != null )
+                    {
+                        // don't show 'Other DataView filter' by default
+                        visibleDefault = false;
+                    }
+
                     var result = new
                     {
                         a.Guid,
@@ -653,7 +668,7 @@ namespace RockWeb.Blocks.Reporting
                         a.Summary,
                         a.FilterExpressionType,
                         a.ParentFilter,
-                        IsVisible = selectDefault || selectedDataFieldGuids.Contains( a.Guid ),
+                        IsVisible = visibleDefault || selectedDataFieldGuids.Contains( a.Guid ),
                         IsConfigurable = selectDefault || configurableDataFieldGuids.Contains( a.Guid ),
                         IsTogglable = selectDefault || togglableDataFieldGuids.Contains( a.Guid ),
                         FilterInfo = a,
@@ -914,17 +929,29 @@ namespace RockWeb.Blocks.Reporting
                 var otherDataView = otherDataViewFilter.GetSelectedDataView( filterInfo.Selection );
                 if ( otherDataView != null )
                 {
-                    var otherDataViewFilterList = new List<FilterInfo>();
-                    GetFilterListRecursive( otherDataViewFilterList, otherDataView.DataViewFilter, reportEntityType );
-                    foreach ( var otherFilter in otherDataViewFilterList )
+                    if ( !otherDataView.TransformEntityTypeId.HasValue )
                     {
-                        if ( otherFilter.FromOtherDataView == null )
+                        var otherDataViewFilterList = new List<FilterInfo>();
+                        GetFilterListRecursive( otherDataViewFilterList, otherDataView.DataViewFilter, reportEntityType );
+                        foreach ( var otherFilter in otherDataViewFilterList )
                         {
-                            otherFilter.FromOtherDataView = otherDataView.Name;
+                            if ( otherFilter.FromOtherDataView == null )
+                            {
+                                otherFilter.FromOtherDataView = otherDataView.Name;
+                            }
+                        }
+
+                        filterList.AddRange( otherDataViewFilterList );
+                    }
+                    else
+                    {
+                        var transformEntityType = EntityTypeCache.Read( otherDataView.TransformEntityTypeId.Value );
+                        filterInfo.FromOtherDataView = otherDataView.Name;
+                        if ( transformEntityType != null )
+                        {
+                            filterInfo.Title = string.Format( "{0} - {1}", filterInfo.Component.GetTitle( reportEntityType.GetType() ), transformEntityType.FriendlyName );
                         }
                     }
-
-                    filterList.AddRange( otherDataViewFilterList );
                 }
             }
 
@@ -956,12 +983,20 @@ namespace RockWeb.Blocks.Reporting
                     if ( filterInfo != null )
                     {
                         var otherDataViewFilter = filterInfo.Component as Rock.Reporting.DataFilter.OtherDataViewFilter;
-
-                        if ( otherDataViewFilter != null && otherDataViewFilter.GetSelectedDataView( filterInfo.Selection ) != null )
+                        DataView otherDataView = null;
+                        if ( otherDataViewFilter != null )
                         {
-                            // Don't show the Row (or Checkboxes) for any of the OtherDataView filters
-                            e.Row.Visible = false;
-                            hideCheckboxes = true;
+                            otherDataView = otherDataViewFilter.GetSelectedDataView( filterInfo.Selection );
+                        }
+
+                        if ( otherDataView != null )
+                        {
+                            if ( !otherDataView.TransformEntityTypeId.HasValue )
+                            { 
+                                // Don't show the Row (or Checkboxes) for any of the OtherDataView filters since we'll show all the filters from the dataview seperately
+                                e.Row.Visible = false;
+                                hideCheckboxes = true;
+                            }
                         }
                     }
                 }
