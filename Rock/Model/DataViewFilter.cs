@@ -27,6 +27,7 @@ using System.Text;
 using Rock.Data;
 using Rock.Reporting;
 using Rock.Security;
+using Rock.Web.Cache;
 
 namespace Rock.Model
 {
@@ -321,9 +322,10 @@ namespace Rock.Model
         {
             if ( this.ExpressionType == FilterExpressionType.Filter )
             {
-                if ( EntityType != null )
+                if ( EntityTypeId.HasValue )
                 {
-                    var component = Rock.Reporting.DataFilterContainer.GetComponent( EntityType.Name );
+                    var entityType = EntityTypeCache.Read( EntityTypeId.Value );
+                    var component = Rock.Reporting.DataFilterContainer.GetComponent( entityType.Name );
                     if ( component != null )
                     {
                         return component.FormatSelection( filteredEntityType, this.Selection );
@@ -375,6 +377,18 @@ namespace Rock.Model
             return string.Empty;
         }
 
+        public override string ToString()
+        {
+            if ( this.ExpressionType == FilterExpressionType.Filter && this.EntityTypeId.HasValue )
+            {
+                return this.ToString( EntityTypeCache.Read( this.EntityTypeId.Value ).GetEntityType() );
+            }
+            else 
+            {
+                return this.ExpressionType.ConvertToString();
+            }
+        }
+
         #endregion
 
     }
@@ -397,6 +411,20 @@ namespace Rock.Model
     }
 
     #endregion
+
+    #region Classes
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class DataViewFilterOverride
+    {
+        public Guid DataFilterGuid { get; set; }
+        public bool IncludeFilter { get; set; }
+        public string Selection { get; set; }
+    }
+
+    #endregion 
 
     #region Enumerations
 

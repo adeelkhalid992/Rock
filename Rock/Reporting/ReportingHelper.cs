@@ -44,6 +44,21 @@ namespace Rock.Reporting
         /// <param name="errorMessage">The error message.</param>
         public static void BindGrid( Report report, Grid gReport, Person currentPerson, int? databaseTimeoutSeconds, out string errorMessage )
         {
+            List<DataViewFilterOverride> dataViewFilterOverrides = new List<DataViewFilterOverride>();
+            BindGrid( report, gReport, currentPerson, dataViewFilterOverrides, databaseTimeoutSeconds, out errorMessage );
+        }
+
+        /// <summary>
+        /// Binds the grid.
+        /// </summary>
+        /// <param name="report">The report.</param>
+        /// <param name="gReport">The g report.</param>
+        /// <param name="currentPerson">The current person.</param>
+        /// <param name="dataViewFilterOverrides">The data view filter overrides.</param>
+        /// <param name="databaseTimeoutSeconds">The database timeout seconds.</param>
+        /// <param name="errorMessage">The error message.</param>
+        public static void BindGrid( Report report, Grid gReport, Person currentPerson, List<DataViewFilterOverride> dataViewFilterOverrides, int? databaseTimeoutSeconds, out string errorMessage )
+        {
             errorMessage = null;
             if ( report != null )
             {
@@ -292,7 +307,7 @@ namespace Rock.Reporting
                     }
 
                     var qryErrors = new List<string>();
-                    dynamic qry = report.GetQueryable( entityType, selectedEntityFields, selectedAttributes, selectedComponents, sortProperty, databaseTimeoutSeconds ?? 180, out qryErrors );
+                    dynamic qry = report.GetQueryable( entityType, selectedEntityFields, selectedAttributes, selectedComponents, sortProperty, dataViewFilterOverrides, databaseTimeoutSeconds ?? 180, out qryErrors );
                     errors.AddRange( qryErrors );
                     gReport.SetLinqDataSource( qry );
                     gReport.DataBind();
@@ -424,5 +439,7 @@ namespace Rock.Reporting
         {
             ScriptManager.RegisterClientScriptInclude( filterField, filterField.GetType(), "reporting-include", filterField.RockBlock().RockPage.ResolveRockUrl( "~/Scripts/Rock/reportingInclude.js", true ) );
         }
+
+        
     }
 }
