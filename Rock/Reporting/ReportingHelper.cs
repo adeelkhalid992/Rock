@@ -44,7 +44,7 @@ namespace Rock.Reporting
         /// <param name="errorMessage">The error message.</param>
         public static void BindGrid( Report report, Grid gReport, Person currentPerson, int? databaseTimeoutSeconds, out string errorMessage )
         {
-            List<DataViewFilterOverride> dataViewFilterOverrides = new List<DataViewFilterOverride>();
+            DataViewFilterOverrides dataViewFilterOverrides = new DataViewFilterOverrides();
             BindGrid( report, gReport, currentPerson, dataViewFilterOverrides, databaseTimeoutSeconds, out errorMessage );
         }
 
@@ -57,7 +57,7 @@ namespace Rock.Reporting
         /// <param name="dataViewFilterOverrides">The data view filter overrides.</param>
         /// <param name="databaseTimeoutSeconds">The database timeout seconds.</param>
         /// <param name="errorMessage">The error message.</param>
-        public static void BindGrid( Report report, Grid gReport, Person currentPerson, List<DataViewFilterOverride> dataViewFilterOverrides, int? databaseTimeoutSeconds, out string errorMessage )
+        public static void BindGrid( Report report, Grid gReport, Person currentPerson, DataViewFilterOverrides dataViewFilterOverrides, int? databaseTimeoutSeconds, out string errorMessage )
         {
             errorMessage = null;
             if ( report != null )
@@ -345,6 +345,29 @@ namespace Rock.Reporting
                     errorMessage = "WARNING: There was a problem with one or more of the report's data components...<br/><br/> " + errors.AsDelimited( "<br/>" );
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the filter overrides from controls.
+        /// </summary>
+        /// <param name="phFilters">The ph filters.</param>
+        /// <returns></returns>
+        public static DataViewFilterOverrides GetFilterOverridesFromControls( PlaceHolder phFilters )
+        {
+            if ( phFilters.Controls.Count > 0 )
+            {
+                var dataViewFilter = GetFilterFromControls( phFilters );
+                var list = phFilters.ControlsOfTypeRecursive<FilterField>().Select( a => new DataViewFilterOverride
+                {
+                    DataFilterGuid = a.DataViewFilterGuid,
+                    IncludeFilter = a.ShowCheckbox ? a.CheckBoxChecked.GetValueOrDefault( true ) : true,
+                    Selection = a.GetSelection()
+                } ).ToList();
+
+                return new DataViewFilterOverrides( list );
+            }
+
+            return null;
         }
 
         /// <summary>

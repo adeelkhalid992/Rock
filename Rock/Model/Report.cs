@@ -223,7 +223,7 @@ namespace Rock.Model
         /// <returns></returns>
         public IQueryable GetQueryable( Type entityType, Dictionary<int, EntityField> entityFields, Dictionary<int, AttributeCache> attributes, Dictionary<int, ReportField> selectComponents, Rock.Web.UI.Controls.SortProperty sortProperty, int? databaseTimeoutSeconds, out List<string> errorMessages )
         {
-            var dataViewFilterOverrides = new List<DataViewFilterOverride>();
+            var dataViewFilterOverrides = new DataViewFilterOverrides();
             return this.GetQueryable( entityType, entityFields, attributes, selectComponents, sortProperty, dataViewFilterOverrides, databaseTimeoutSeconds, out errorMessages );
         }
 
@@ -240,7 +240,8 @@ namespace Rock.Model
         /// <param name="errorMessages">The error messages.</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public IQueryable GetQueryable( Type entityType, Dictionary<int, EntityField> entityFields, Dictionary<int, AttributeCache> attributes, Dictionary<int, ReportField> selectComponents, Rock.Web.UI.Controls.SortProperty sortProperty, List<DataViewFilterOverride> dataViewFilterOverrides, int? databaseTimeoutSeconds, out List<string> errorMessages )
+        public IQueryable GetQueryable( Type entityType, Dictionary<int, EntityField> entityFields, Dictionary<int, AttributeCache> attributes, Dictionary<int, ReportField> selectComponents, 
+            Rock.Web.UI.Controls.SortProperty sortProperty, DataViewFilterOverrides dataViewFilterOverrides, int? databaseTimeoutSeconds, out List<string> errorMessages )
         {
             errorMessages = new List<string>();
 
@@ -368,7 +369,7 @@ namespace Rock.Model
                     Expression whereExpression = null;
                     if ( this.DataView != null )
                     {
-                        whereExpression = this.DataView.GetExpression( serviceInstance, paramExpression, out errorMessages );
+                        whereExpression = this.DataView.GetExpression( serviceInstance, paramExpression, dataViewFilterOverrides, out errorMessages );
                     }
 
                     MethodInfo getMethod = serviceInstance.GetType().GetMethod( "Get", new Type[] { typeof( ParameterExpression ), typeof( Expression ), typeof( Rock.Web.UI.Controls.SortProperty ), typeof( int? ) } );
